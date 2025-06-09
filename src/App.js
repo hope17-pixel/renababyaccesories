@@ -9,14 +9,13 @@ import axios from 'axios';
 import Signin from './components/Signin';
 import Signup from './components/Signup';
 import Uploadproduct from './components/Uploadproduct';
-import Navbar from './components/Navbar';
 import Makepayment from './components/Makepayment';
 import GetProducts from './components/Getproducts';
-import Details from './components/details';
 import Home from './components/home';
 import Chatbot from './components/help';
 import Sidebar from './components/side';
 import ProfilePage from './components/profile';
+import Details from './components/details';
 
 function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -50,10 +49,11 @@ function App() {
       <div className={`app-container ${sidebarOpen ? 'sidebar-open' : ''}`}>
         <Sidebar isOpen={sidebarOpen} onClose={toggleSidebar} user={user} />
         <main className="main-content">
-          <header className="App-header bg-warning text-center py-3">
+        <header className="App-header bg-warning text-center py-3">
             <h1>RENA BABY ACCESSORIES</h1>
             <Details />
-          </header>
+        </header>
+          
           <button
             className="menu-btn btn btn-outline-dark m-2"
             onClick={toggleSidebar}
@@ -61,7 +61,7 @@ function App() {
           >
             ☰ Menu
           </button>
-          <Navbar user={user} setUser={setUser} />
+          
           <div className="content-area container">
             <Routes>
               <Route path="/signup" element={<Signup setUser={setUser} />} />

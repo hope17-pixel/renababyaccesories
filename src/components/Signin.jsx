@@ -1,100 +1,213 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { FaGoogle, FaFacebookF, FaGithub, FaSpinner } from 'react-icons/fa';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
+import { validateEmail } from '../utils/validation';
 
 const Signin = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [success, setSuccess] = useState('');
-  const [loading, setLoading] = useState('');
-  const [error, setError] = useState('');
+  const [formData, setFormData] = useState({
+    email: '',
+    password: ''
+  });
+  const [errors, setErrors] = useState({});
+  const [loading, setLoading] = useState(false);
+  const [apiError, setApiError] = useState('');
   const navigate = useNavigate();
+  const location = useLocation();
 
-  const submit = async (e) => {
-    e.preventDefault();
-    setLoading('Please wait...');
-    setError('');
-    setSuccess('');
-
-    try {
-      const data = new FormData();
-      data.append('email', email);
-      data.append('password', password);
-
-      const response = await axios.post('https://hope00.pythonanywhere.com/api/signin', data);
-      setLoading('');
-
-      setSuccess(response.data.Success || 'Login successful');
-      localStorage.setItem('user', JSON.stringify(response.data.user));
-
-      if (response.data.user) {
-        navigate('/');
-      } else {
-        setError('Login Failed!!');
+  useEffect(() => {
+    const userData = localStorage.getItem('user');
+    if (userData) {
+      try {
+        const user = JSON.parse(userData);
+        if (user?.token) {
+          const urlParams = new URLSearchParams(window.location.search);
+          const redirectPath = urlParams.get('redirect') || location.state?.from || '/';
+          navigate(redirectPath);
+        }
+      } catch (err) {
+        localStorage.removeItem('user');
       }
+    }
+  }, [navigate, location]);
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+    
+    if (errors[name]) {
+      setErrors(prev => ({
+        ...prev,
+        [name]: ''
+      }));
+    }
+  };
+
+  const validateForm = () => {
+    const newErrors = {};
+    
+    if (!formData.email) {
+      newErrors.email = 'Email is required';
+    } else if (!validateEmail(formData.email)) {
+      newErrors.email = 'Please enter a valid email';
+    }
+    
+    if (!formData.password) {
+      newErrors.password = 'Password is required';
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setApiError('');
+    
+    if (!validateForm()) return;
+    
+    setLoading(true);
+    
+    try {
+      const formDataToSend = new FormData();
+      formDataToSend.append('email', formData.email);
+      formDataToSend.append('password', formData.password);
+
+      const response = await axios.post(
+        'https://hope00.pythonanywhere.com/api/signin',
+        formDataToSend,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        }
+      );
+      
+      localStorage.setItem('user', JSON.stringify({
+        ...response.data.user
+      }));
+        const urlParams = new URLSearchParams(window.location.search);
+        const redirectPath = urlParams.get('redirect') || location.state?.from || '/home';
+        navigate(redirectPath);
+
     } catch (error) {
-      setLoading('');
-      setSuccess('');
-      setError(error.response?.data?.Error || 'An error occurred. Please try again.');
+      console.error('Login error:', error.response?.status, error.response?.data);
+      setApiError(
+        error.response?.data?.error || 
+        error.message || 
+        'Login failed. Please try again.'
+      );
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="flex justify-center items-center min-h-screen bg-gray-100">
-      <div className="w-full max-w-md bg-white rounded-lg shadow-lg p-6 card">
-        <form onSubmit={submit} className="space-y-4">
-          <h2 className="text-2xl font-bold text-center text-gray-800">Sign In</h2>
-          {success && (
-            <div className="bg-green-100 text-green-700 p-3 rounded-md text-center">
-              {success}
+    <div className="d-flex justify-content-center align-items-center min-vh-100 bg-light px-2">
+      <div className="card p-3 p-md-4 border-0 shadow" style={{ width: '100%', maxWidth: '400px' }}>
+        <div className="">
+          <h1 className="text-center fs-4 fs-md-3 fw-bold mb-4">Sign In</h1>
+          
+          <form onSubmit={handleSubmit} noValidate>
+            {apiError && <div className="alert alert-danger">{apiError}</div>}
+            
+            <div className="mb-3">
+              <label htmlFor="email" className="form-label">Email</label>
+              <input 
+                type="email" 
+                id="email"
+                name="email"
+                className={`form-control ${errors.email ? 'is-invalid' : ''}`}
+                placeholder="name@example.com"
+                value={formData.email}
+                onChange={handleChange}
+                required
+              />
+              {errors.email && <div className="invalid-feedback">{errors.email}</div>}
             </div>
-          )}
-          {error && (
-            <div className="bg-red-100 text-red-700 p-3 rounded-md text-center">
-              {error}
+            
+            <div className="mb-3">
+              <label htmlFor="password" className="form-label">Password</label>
+              <input 
+                type="password" 
+                id="password"
+                name="password"
+                className={`form-control ${errors.password ? 'is-invalid' : ''}`}
+                placeholder="Password"
+                value={formData.password}
+                onChange={handleChange}
+                required
+              />
+              {errors.password && <div className="invalid-feedback">{errors.password}</div>}
             </div>
-          )}
-          {loading && (
-            <div className="bg-blue-100 text-blue-700 p-3 rounded-md text-center">
-              {loading}
+            
+            <div className="d-flex justify-content-between align-items-center mb-3 flex-wrap">
+              <div className="form-check">
+                <input 
+                  type="checkbox" 
+                  className="form-check-input" 
+                  id="rememberMe"
+                />
+                <label className="form-check-label" htmlFor="rememberMe">
+                  Remember me
+                </label>
+              </div>
+              <Link to="/forgot-password" className="text-decoration-none mt-2 mt-md-0">
+                Forgot Password?
+              </Link>
             </div>
-          )}
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-              Email
-            </label>
-            <input
-              type="email"
-              id="email"
-              placeholder="Enter your email"
-              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
-          </div>
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-              Password
-            </label>
-            <input
-              type="password"
-              id="password"
-              placeholder="Enter your password"
-              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-          </div>
-          <button
-            type="submit"
-            className="w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition disabled:opacity-50"
-            disabled={loading}
-          >
-            {loading ? 'Signing In...' : 'Sign In'}
-          </button>
-        </form>
+            
+            <button 
+              type="submit" 
+              className="btn btn-primary w-100 fw-bold py-2 mb-3"
+              disabled={loading}
+            >
+              {loading ? (
+                <>
+                  <FaSpinner className="fa-spin me-2" />
+                  Signing In...
+                </>
+              ) : 'Sign In'}
+            </button>
+            
+            <div className="d-flex align-items-center my-3">
+              <hr className="flex-grow-1" />
+              <span className="px-3 text-muted">OR</span>
+              <hr className="flex-grow-1" />
+            </div>
+            
+            <div className="d-flex justify-content-center gap-3 mb-3">
+              <button 
+                type="button" 
+                className="btn btn-outline-danger p-3"
+                style={{ minWidth: '48px', minHeight: '48px' }}
+              >
+                <FaGoogle className="fs-5" />
+              </button>
+              <button 
+                type="button" 
+                className="btn btn-outline-primary p-3"
+                style={{ minWidth: '48px', minHeight: '48px' }}
+              >
+                <FaFacebookF className="fs-5" />
+              </button>
+              <button 
+                type="button" 
+                className="btn btn-outline-dark p-3"
+                style={{ minWidth: '48px', minHeight: '48px' }}
+              >
+                <FaGithub className="fs-5" />
+              </button>
+            </div>
+            
+            <p className="text-center mt-3">
+              Don't have an account? <Link to="/signup" className="text-primary">Sign up</Link>
+            </p>
+          </form>
+        </div>
       </div>
     </div>
   );

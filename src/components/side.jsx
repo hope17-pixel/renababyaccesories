@@ -13,18 +13,8 @@ const Sidebar = ({ isOpen, onClose, user }) => {
           </button>
         </div>
         <ul>
-          <li><Link to="/help">Help</Link></li>
-          {user ? (
-            <>
-              <li><Link to="/profile">Profile</Link></li>
-              <li><Link to="/" onClick={() => localStorage.removeItem('token')}>Logout</Link></li>
-            </>
-          ) : (
-            <>
-              <li><Link to="/signin">Sign In</Link></li>
-              <li><Link to="/signup">Sign Up</Link></li>
-            </>
-          )}
+          <li><Link to="/profile">Profile</Link></li>
+          <li><Link to="/home">Home Page</Link></li>
         </ul>
       </nav>
     </aside>
